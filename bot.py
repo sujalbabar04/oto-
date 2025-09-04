@@ -7,7 +7,7 @@ from telegram import (
     ReplyKeyboardRemove
 )
 from telegram.ext import (
-    ApplicationBuilder,
+    Application,
     CommandHandler,
     ContextTypes,
     MessageHandler,
@@ -191,8 +191,12 @@ def main():
     try:
         logger.info("Starting OTO Tournament Bot...")
         
-        # Create application using ApplicationBuilder (older method that works better on some platforms)
-        application = ApplicationBuilder().token(BOT_TOKEN).build()
+        # Create application with minimal configuration
+        application = (
+            Application.builder()
+            .token(BOT_TOKEN)
+            .build()
+        )
 
         # Add error handler
         application.add_error_handler(error_handler)
@@ -221,15 +225,16 @@ def main():
         logger.info("🤖 Bot is starting...")
         print("🤖 OTO Tournament Bot is running!")
         
+        # Use polling with error recovery
         application.run_polling(
             allowed_updates=Update.ALL_TYPES,
-            drop_pending_updates=True
+            drop_pending_updates=True,
+            close_loop=False
         )
         
     except Exception as e:
         logger.error(f"Critical error starting bot: {e}")
         print(f"❌ Failed to start bot: {e}")
-        raise
 
 if __name__ == "__main__":
     main()
