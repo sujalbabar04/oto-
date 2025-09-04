@@ -21,8 +21,8 @@ from telegram.ext import (
 
 # ------------------- CONFIG -------------------
 # Use environment variables in production (e.g., Render)
-BOT_TOKEN = os.getenv("BOT_TOKEN", "YOUR_BOT_TOKEN")
-MODERATOR_GROUP_ID = int(os.getenv("MODERATOR_GROUP_ID", "-1000000000000"))
+BOT_TOKEN = os.getenv("BOT_TOKEN", "7940607419:AAHmVBXOccZ5fWkE7HxGK42ij8zSFr8lBAk")
+MODERATOR_GROUP_ID = int(os.getenv("MODERATOR_GROUP_ID", "-4687499589"))
 MINI_APP_URL = os.getenv("MINI_APP_URL", "https://oto-tournament.vercel.app")
 
 # Admin user IDs (replace with actual admin Telegram IDs)
