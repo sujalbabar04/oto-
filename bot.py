@@ -1,5 +1,5 @@
 import logging
-import asyncio
+import os
 from telegram import (
     Update,
     InlineKeyboardButton,
@@ -7,7 +7,7 @@ from telegram import (
     ReplyKeyboardRemove
 )
 from telegram.ext import (
-    Application,
+    ApplicationBuilder,
     CommandHandler,
     ContextTypes,
     MessageHandler,
@@ -17,8 +17,8 @@ from telegram.ext import (
 )
 
 # ------------------- CONFIG -------------------
-BOT_TOKEN = "7940607419:AAHmVBXOccZ5fWkE7HxGK42ij8zSFr8lBAk"  # Your bot token
-MODERATOR_GROUP_ID = -4687499589  # Your group ID
+BOT_TOKEN = "7940607419:AAHmVBXOccZ5fWkE7HxGK42ij8zSFr8lBAk"
+MODERATOR_GROUP_ID = -4687499589
 MINI_APP_URL = "https://oto-tournament.vercel.app"
 
 # Configure logging
@@ -30,20 +30,6 @@ logger = logging.getLogger(__name__)
 
 # ------------------- STATES -------------------
 ASK_NAME, ASK_GAME_ID, ASK_LEVEL, ASK_STATE = range(4)
-
-# ------------------- ERROR HANDLER -------------------
-async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Log the error and send a telegram message to notify the developer."""
-    logger.error(msg="Exception while handling an update:", exc_info=context.error)
-    
-    # Try to send error message to user if possible
-    if isinstance(update, Update) and update.effective_message:
-        try:
-            await update.effective_message.reply_text(
-                "❌ Sorry, something went wrong. Please try again later or contact support."
-            )
-        except Exception:
-            pass
 
 # ------------------- START -------------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -89,77 +75,34 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
     except Exception as e:
         logger.error(f"Error in start function: {e}")
-        if update.effective_message:
-            await update.effective_message.reply_text("❌ Something went wrong. Please try /start again.")
 
 # ------------------- CREATE PROFILE -------------------
 async def create_profile_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        query = update.callback_query
-        await query.answer()
-        await query.message.reply_text(
-            "👤 Let's create your profile!\n\nWhat's your *Name*?",
-            parse_mode="Markdown"
-        )
-        return ASK_NAME
-    except Exception as e:
-        logger.error(f"Error in create_profile_start: {e}")
-        return ConversationHandler.END
+    query = update.callback_query
+    await query.answer()
+    await query.message.reply_text(
+        "👤 Let's create your profile!\n\nWhat's your *Name*?",
+        parse_mode="Markdown"
+    )
+    return ASK_NAME
 
 async def ask_game_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        if not update.message or not update.message.text:
-            await update.message.reply_text("Please enter a valid name.")
-            return ASK_NAME
-            
-        context.user_data["name"] = update.message.text.strip()
-        await update.message.reply_text(
-            "🎮 Enter your *Game ID*:",
-            parse_mode="Markdown"
-        )
-        return ASK_GAME_ID
-    except Exception as e:
-        logger.error(f"Error in ask_game_id: {e}")
-        return ConversationHandler.END
+    context.user_data["name"] = update.message.text.strip()
+    await update.message.reply_text("🎮 Enter your *Game ID*:", parse_mode="Markdown")
+    return ASK_GAME_ID
 
 async def ask_level(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        if not update.message or not update.message.text:
-            await update.message.reply_text("Please enter a valid Game ID.")
-            return ASK_GAME_ID
-            
-        context.user_data["game_id"] = update.message.text.strip()
-        await update.message.reply_text(
-            "🔥 Enter your *Level*:",
-            parse_mode="Markdown"
-        )
-        return ASK_LEVEL
-    except Exception as e:
-        logger.error(f"Error in ask_level: {e}")
-        return ConversationHandler.END
+    context.user_data["game_id"] = update.message.text.strip()
+    await update.message.reply_text("🔥 Enter your *Level*:", parse_mode="Markdown")
+    return ASK_LEVEL
 
 async def ask_state(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        if not update.message or not update.message.text:
-            await update.message.reply_text("Please enter a valid level.")
-            return ASK_LEVEL
-            
-        context.user_data["level"] = update.message.text.strip()
-        await update.message.reply_text(
-            "🌍 Enter your *State*:",
-            parse_mode="Markdown"
-        )
-        return ASK_STATE
-    except Exception as e:
-        logger.error(f"Error in ask_state: {e}")
-        return ConversationHandler.END
+    context.user_data["level"] = update.message.text.strip()
+    await update.message.reply_text("🌍 Enter your *State*:", parse_mode="Markdown")
+    return ASK_STATE
 
 async def save_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
-        if not update.message or not update.message.text:
-            await update.message.reply_text("Please enter a valid state.")
-            return ASK_STATE
-            
         context.user_data["state"] = update.message.text.strip()
         user = update.effective_user
 
@@ -186,7 +129,6 @@ async def save_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as mod_error:
             logger.error(f"Failed to send message to moderator group: {mod_error}")
 
-        # Clear user data
         context.user_data.clear()
         return ConversationHandler.END
         
@@ -196,86 +138,73 @@ async def save_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ------------------- CONTACT -------------------
 async def contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        query = update.callback_query
-        await query.answer()
-        contact_text = (
-            "📞 *Contact Support*\n\n"
-            "For any questions or issues:\n\n"
-            "📱 Telegram: @yourusername\n"
-            "📧 Email: support@ototournament.com\n"
-            "🕒 Support Hours: 9 AM - 6 PM (Mon-Fri)"
-        )
-        await query.message.reply_text(contact_text, parse_mode="Markdown")
-    except Exception as e:
-        logger.error(f"Error in contact: {e}")
+    query = update.callback_query
+    await query.answer()
+    contact_text = (
+        "📞 *Contact Support*\n\n"
+        "For any questions or issues:\n\n"
+        "📱 Telegram: @yourusername\n"
+        "📧 Email: support@ototournament.com\n"
+        "🕒 Support Hours: 9 AM - 6 PM (Mon-Fri)"
+    )
+    await query.message.reply_text(contact_text, parse_mode="Markdown")
 
 # ------------------- REFERRAL -------------------
 async def referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    user = update.effective_user
+    
     try:
-        query = update.callback_query
-        await query.answer()
-        user = update.effective_user
         bot_info = await context.bot.get_me()
-        bot_username = bot_info.username if bot_info else None
+        bot_username = bot_info.username
+        referral_link = f"https://t.me/{bot_username}?start={user.id}"
+    except:
+        referral_link = "Contact admin for referral link"
         
-        if bot_username:
-            referral_link = f"https://t.me/{bot_username}?start={user.id}"
-        else:
-            referral_link = "Bot username not available"
-            
-        referral_text = (
-            "🎁 *Referral Program*\n\n"
-            f"Share this link with friends:\n`{referral_link}`\n\n"
-            "💰 *Benefits:*\n"
-            "• Earn OTO Coins for each referral\n"
-            "• Get bonus rewards\n"
-            "• Unlock exclusive tournaments\n\n"
-            "👉 Start sharing and earning now!"
-        )
-        await query.message.reply_text(referral_text, parse_mode="Markdown")
-    except Exception as e:
-        logger.error(f"Error in referral: {e}")
+    referral_text = (
+        "🎁 *Referral Program*\n\n"
+        f"Share this link with friends:\n`{referral_link}`\n\n"
+        "💰 *Benefits:*\n"
+        "• Earn OTO Coins for each referral\n"
+        "• Get bonus rewards\n"
+        "• Unlock exclusive tournaments\n\n"
+        "👉 Start sharing and earning now!"
+    )
+    await query.message.reply_text(referral_text, parse_mode="Markdown")
 
 # ------------------- CANCEL -------------------
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        context.user_data.clear()
-        await update.message.reply_text(
-            "❌ Profile creation cancelled.\n\nUse /start to return to main menu.",
-            reply_markup=ReplyKeyboardRemove()
-        )
-        return ConversationHandler.END
-    except Exception as e:
-        logger.error(f"Error in cancel: {e}")
-        return ConversationHandler.END
+    context.user_data.clear()
+    await update.message.reply_text(
+        "❌ Profile creation cancelled.\n\nUse /start to return to main menu.",
+        reply_markup=ReplyKeyboardRemove()
+    )
+    return ConversationHandler.END
 
-# ------------------- ALIVE CHECK -------------------
-async def alive_check(context: ContextTypes.DEFAULT_TYPE):
-    try:
-        await context.bot.send_message(
-            chat_id=MODERATOR_GROUP_ID,
-            text="✅ OTO Tournament Bot is online and running!"
-        )
-        logger.info("Alive check sent successfully")
-    except Exception as e:
-        logger.error(f"Failed to send alive check: {e}")
+# ------------------- ERROR HANDLER -------------------
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.error("Exception while handling an update:", exc_info=context.error)
 
 # ------------------- MAIN -------------------
-async def main():
+def main():
     try:
-        # Create application without job queue initially
-        application = Application.builder().token(BOT_TOKEN).build()
+        logger.info("Starting OTO Tournament Bot...")
+        
+        # Create application using ApplicationBuilder (older method that works better on some platforms)
+        application = ApplicationBuilder().token(BOT_TOKEN).build()
 
         # Add error handler
         application.add_error_handler(error_handler)
 
-        # Add handlers
+        # Add command handlers
         application.add_handler(CommandHandler("start", start))
+        
+        # Add callback query handlers
         application.add_handler(CallbackQueryHandler(contact, pattern="^contact$"))
         application.add_handler(CallbackQueryHandler(referral, pattern="^referral$"))
 
-        # Profile creation conversation handler
+        # Add conversation handler for profile creation
         conv_handler = ConversationHandler(
             entry_points=[CallbackQueryHandler(create_profile_start, pattern="^create_profile$")],
             states={
@@ -285,44 +214,22 @@ async def main():
                 ASK_STATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, save_profile)]
             },
             fallbacks=[CommandHandler("cancel", cancel)],
-            per_message=False
         )
         application.add_handler(conv_handler)
 
-        # Initialize the application
-        await application.initialize()
+        # Start the bot
+        logger.info("🤖 Bot is starting...")
+        print("🤖 OTO Tournament Bot is running!")
         
-        # Add job queue after initialization
-        try:
-            job_queue = application.job_queue
-            if job_queue:
-                job_queue.run_repeating(alive_check, interval=600, first=10)
-        except Exception as job_error:
-            logger.warning(f"Could not set up job queue: {job_error}")
-
-        logger.info("🤖 OTO Tournament Bot is starting...")
-        print("🤖 Bot is running... Press Ctrl+C to stop.")
-        
-        # Start the application
-        await application.start()
-        
-        # Start polling
-        await application.updater.start_polling()
-        
-        # Run until stopped
-        await application.updater.idle()
+        application.run_polling(
+            allowed_updates=Update.ALL_TYPES,
+            drop_pending_updates=True
+        )
         
     except Exception as e:
-        logger.error(f"Failed to start bot: {e}")
-        print(f"❌ Error starting bot: {e}")
-    finally:
-        # Clean shutdown
-        try:
-            await application.stop()
-            await application.shutdown()
-        except:
-            pass
+        logger.error(f"Critical error starting bot: {e}")
+        print(f"❌ Failed to start bot: {e}")
+        raise
 
 if __name__ == "__main__":
-    # Run the async main function
-    asyncio.run(main())
+    main()
